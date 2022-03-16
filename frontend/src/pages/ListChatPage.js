@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom"
 
-import React, { useState, useEffect, useContext, useRef, useCallback  } from "react";
+import React, { useState, useEffect, useContext } from "react";
 
 import AuthContext from "../context/AuthContext";
+
+import { useWebSocket } from "../hooks/useWebSocket";
+import { useFetch } from "../hooks/useFetch";
 
 
 const ChatList = ({chats}) => {
@@ -24,67 +27,26 @@ const ChatList = ({chats}) => {
 
 
 const ListChatPage = () => {
-	const [chats, setChats] = useState([]);
-	const { authTokens, logoutUser } = useContext(AuthContext);
-	const ws = useRef(null);
+	const {fetchData} = useFetch("http://127.0.0.1:8000/chats/")
+	const [chats, setChats] = useState([])
+	const {authTokens} = useContext(AuthContext)
+	const socket_url = 'ws://' + '127.0.0.1:8000' + '/ws/chat/' + "?token=" + String(authTokens.access)
+	const {data, status, ws} = useWebSocket(socket_url)
 
 	useEffect(() => {
-		getChats()
-		
-		ws.current = new WebSocket(
-			'ws://'
-			+ '127.0.0.1:8000'
-			+ '/ws/chat/'
-			+ "?token=" + String(authTokens.access)
-		)
+		setChats(fetchData)
+	}, [fetchData])
 
-		ws.current.onopen = () => console.log("Соединение открыто");
-		ws.current.onclose = () => console.log("Соединение закрыто");
-
-		gettingData();
-	}, []);
-
-	const test = () => {
-		console.log(chats)
-	}
-
-	test()
-
-	const gettingData = useCallback(() => {
-		if (!ws.current) return;
-
-		ws.current.onmessage = e => {
-			test()
-			const message = JSON.parse(e.data);
-			const message_data = message.message_data
-			const room_name = message.room_name
-
-			// const chat = chats.filter(chat => chat.name == room_name )
-			// console.log(chats)
-			// console.log(authTokens)
-
-		};
-	}, [] )
-
-	const getChats = async () => {
-		const response = await fetch("http://127.0.0.1:8000/chats/", {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: "Bearer " + String(authTokens.access),
-			},
-		});
-
-		const data = await response.json();
-
-		if (response.status === 200) {
-			setChats(data);
-			// console.log(data)
-		} else if (response.statusText === "Unauthorized") {
-			logoutUser();
-			console.log("Не пускает")
+	useEffect(()=>{
+		if (status){
+			const room_name = data.room_name
+			const chat = chats.filter(chat => chat.name == room_name )[0]
+			chat.last_message = data.message_data
+			setChats(prevChats => ([chat, ...prevChats.filter(item => {
+				if (item.id != chat.id) return item
+			})]))
 		}
-	};
+	}, [data, ws])
 
 	return (
 		<div>
