@@ -1,0 +1,8 @@
+Django==4.0.1
+djangorestframework
+psycopg2==2.9.3
+channels
+channels_redis
+djangorestframework-simplejwt==5.1.0
+djoser==2.1.0
+django-cors-headers
