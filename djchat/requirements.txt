@@ -1,8 +1,9 @@
 Django==4.0.1
 djangorestframework
-psycopg2==2.9.3
+psycopg2
 channels
 channels_redis
-djangorestframework-simplejwt==5.1.0
-djoser==2.1.0
+djangorestframework-simplejwt
+djoser
 django-cors-headers
+Pillow

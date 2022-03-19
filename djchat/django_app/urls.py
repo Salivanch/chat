@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from django_app import settings
 
 urlpatterns = [
-    path('chats/', include('api.chat.urls')),
+    path('api/chats/', include('api.chat.urls')),
     path('admin/', admin.site.urls),
 
 	#path to djoser end points

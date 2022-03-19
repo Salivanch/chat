@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from .models import Message, Room
+from .models import RoomChatMessage, PrivateChatRoom
 
 
-admin.site.register(Message)
-admin.site.register(Room)
+admin.site.register(RoomChatMessage)
+admin.site.register(PrivateChatRoom)

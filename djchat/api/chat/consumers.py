@@ -2,7 +2,11 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from .logics import get_room_or_error, new_message, message_to_user, get_serialized_message
+from .logics import (
+    get_room_or_error, new_message, message_to_user, 
+    get_serialized_message, get_chat_group_name,
+    get_user_group_name
+)
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -10,8 +14,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         print("ChatConsumer: connect: " + str(self.scope["user"]))
 
-        room = await get_room_or_error(self.scope['url_route']['kwargs']['room_name'])
-        self.room_group_name = room.name
+        room_id = self.scope['url_route']['kwargs']['id']
+        self.room = await get_room_or_error(room_id)
+        self.room_group_name = await get_chat_group_name(self.room)
 
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -29,12 +34,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
     # Принимаем сообщение от пользователя
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        message = text_data_json['message']
-
-        room = await get_room_or_error(self.room_group_name)
-        message = await new_message(message=message, user=self.scope["user"], room=room)
-
-        message_data = get_serialized_message(message)
+        message_text = text_data_json['message']
+        message = await new_message(
+            message=message_text, user=self.scope["user"], room=self.room
+        )
+        message_data = await get_serialized_message(message)
 
         # Отправляем сообщение 
         await self.channel_layer.group_send(
@@ -45,8 +49,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
-        # Отправка сообщения в канал частов
-        await message_to_user(self.room_group_name, message_data)
+        # Отправка сообщения в канал чатов
+        await message_to_user(message)
 
     # Метод для отправки сообщения клиентам
     async def chat_message(self, event):
@@ -60,8 +64,8 @@ class ChatsConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         print("ChatsConsumer: connect: " + str(self.scope["user"]))
 
-        room = "user"
-        self.room_group_name = room
+        self.room = await get_user_group_name(self.scope["user"])
+        self.room_group_name = self.room
 
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -79,7 +83,6 @@ class ChatsConsumer(AsyncWebsocketConsumer):
     # Метод для отправки нового сообщения в список чатов
     async def new_message(self, event):
         await self.send(text_data=json.dumps({
-            'message_data': event['message_data'],
-            'room_name': event['room_group_name']
+            'message': event['message'],
         }, ensure_ascii=False))
 
